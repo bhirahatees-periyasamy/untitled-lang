@@ -34,92 +34,162 @@ impl Parser {
         }
     }
 
-    fn factor(&mut self) -> Expr {
+    fn factor(&mut self) -> Result<Expr, String> {
         match self.current() {
             Token::Number(value) => {
                 let value = *value;
-
                 self.advance();
-
-                Expr::Number(value)
+                Ok(Expr::Number(value))
             }
 
             Token::LParen => {
                 self.advance();
-
-                let expr = self.expression();
-
+                let expr = self.expression()?;
                 match self.current() {
-                    Token::RParen => {
-                        self.advance();
-                    }
-
-                    _ => panic!("Expected ')'"),
+                    Token::RParen => self.advance(),
+                    _ => return Err("Expected ')'".to_string()),
                 }
-
-                expr
+                Ok(expr)
             }
 
-            _ => panic!("Unexpected token"),
+            token => Err(format!("Unexpected token: {:?}", token)),
         }
     }
 
-    fn term(&mut self) -> Expr {
-        let mut left = self.factor();
+    fn term(&mut self) -> Result<Expr, String> {
+        let mut left = self.factor()?;
 
         loop {
             if self.is_at_end() { break; }
             match self.current() {
                 Token::Star | Token::Slash => {
                     let operator = self.current().clone();
-
                     self.advance();
-
-                    let right = self.factor();
-
+                    let right = self.factor()?;
                     left = Expr::Binary {
                         left: Box::new(left),
                         operator,
                         right: Box::new(right),
                     };
                 }
-
                 _ => break,
             }
         }
 
-        left
+        Ok(left)
     }
-    fn expression(&mut self) -> Expr {
-        let mut left = self.term();
+
+    fn expression(&mut self) -> Result<Expr, String> {
+        let mut left = self.term()?;
 
         loop {
             if self.is_at_end() { break; }
             match self.current() {
                 Token::Plus | Token::Minus => {
                     let operator = self.current().clone();
-
                     self.advance();
-
-                    let right = self.term();
-
+                    let right = self.term()?;
                     left = Expr::Binary {
                         left: Box::new(left),
                         operator,
                         right: Box::new(right),
                     };
                 }
-
                 _ => break,
             }
         }
 
-        left
+        Ok(left)
     }
 
-    pub fn parse(&mut self) -> Expr {
+    pub fn parse(&mut self) -> Result<Expr, String> {
         self.expression()
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::token::token::Token;
 
+    fn parse(tokens: Vec<Token>) -> Expr {
+        Parser::new(tokens).parse().unwrap()
+    }
+
+    #[test]
+    fn single_number() {
+        let expr = parse(vec![Token::Number(5)]);
+        assert!(matches!(expr, Expr::Number(5)));
+    }
+
+    #[test]
+    fn addition() {
+        let expr = parse(vec![Token::Number(1), Token::Plus, Token::Number(2)]);
+        assert!(matches!(
+            expr,
+            Expr::Binary { operator: Token::Plus, .. }
+        ));
+    }
+
+    #[test]
+    fn subtraction() {
+        let expr = parse(vec![Token::Number(9), Token::Minus, Token::Number(3)]);
+        assert!(matches!(
+            expr,
+            Expr::Binary { operator: Token::Minus, .. }
+        ));
+    }
+
+    #[test]
+    fn multiplication() {
+        let expr = parse(vec![Token::Number(4), Token::Star, Token::Number(5)]);
+        assert!(matches!(
+            expr,
+            Expr::Binary { operator: Token::Star, .. }
+        ));
+    }
+
+    #[test]
+    fn division() {
+        let expr = parse(vec![Token::Number(8), Token::Slash, Token::Number(2)]);
+        assert!(matches!(
+            expr,
+            Expr::Binary { operator: Token::Slash, .. }
+        ));
+    }
+
+    #[test]
+    fn precedence_mul_before_add() {
+        // 2 + 3 * 4  →  Binary(+, 2, Binary(*, 3, 4))
+        let expr = parse(vec![
+            Token::Number(2),
+            Token::Plus,
+            Token::Number(3),
+            Token::Star,
+            Token::Number(4),
+        ]);
+        // Outer operator must be Plus
+        assert!(matches!(expr, Expr::Binary { operator: Token::Plus, .. }));
+        if let Expr::Binary { right, .. } = expr {
+            assert!(matches!(*right, Expr::Binary { operator: Token::Star, .. }));
+        }
+    }
+
+    #[test]
+    fn parentheses_override_precedence() {
+        // (2 + 3) * 4  →  Binary(*, Binary(+, 2, 3), 4)
+        let expr = parse(vec![
+            Token::LParen,
+            Token::Number(2),
+            Token::Plus,
+            Token::Number(3),
+            Token::RParen,
+            Token::Star,
+            Token::Number(4),
+        ]);
+        assert!(matches!(expr, Expr::Binary { operator: Token::Star, .. }));
+        if let Expr::Binary { left, .. } = expr {
+            assert!(matches!(*left, Expr::Binary { operator: Token::Plus, .. }));
+        }
+    }
+}

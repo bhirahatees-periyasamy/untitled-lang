@@ -2,13 +2,13 @@ pub mod lexer;
 pub mod token;
 pub mod parser;
 pub mod evaluator;
-pub mod interepter;
+pub mod interpreter;
 
-use crate::interepter::interepter::Interepter;
+use crate::interpreter::interpreter::Interpreter;
 
 fn main() {
-    let expression = "1 + 2 + 3 * (2 + 3)";
-    let result = Interepter.execute(expression);
+    let expression = "123 * (2 + 3)";
+    let result = Interpreter.execute(expression);
     match result {
         Ok(val) => println!("{}", val),
         Err(err) => println!("{}", err)
