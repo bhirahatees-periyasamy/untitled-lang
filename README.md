@@ -1,5 +1,3 @@
-# loom
-
 A small arithmetic expression interpreter written in Rust. I built this to get a feel for how interpreters work under the hood — lexing, parsing into an AST, and evaluating it recursively.
 
 It handles the usual stuff: `+`, `-`, `*`, `/`, and parentheses for grouping. Operator precedence works as you'd expect (`*` and `/` bind tighter than `+` and `-`).
