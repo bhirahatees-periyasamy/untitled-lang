@@ -2,6 +2,8 @@
 pub enum Token {
     Number(i64),
 
+    Identifier(String),
+
     Plus,
     Minus,
     Star,

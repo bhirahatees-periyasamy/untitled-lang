@@ -6,7 +6,15 @@ impl Evaluator {
     pub fn eval(&self, expr: &Expr) -> Result<i64, String> {
         match expr {
             Expr::Number(val) => Ok(*val),
-            Expr::Binary { left, operator, right } => {
+            Expr::Identifier(val) => {
+                println!("Indentifier Found: {:#?}", val);
+                Ok(0)
+            }
+            Expr::Binary {
+                left,
+                operator,
+                right,
+            } => {
                 let left = self.eval(left)?;
                 let right = self.eval(right)?;
 

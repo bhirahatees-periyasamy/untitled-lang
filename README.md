@@ -38,6 +38,7 @@ There are unit tests for each layer (lexer, parser, evaluator, token) that cover
 - Integer arithmetic: `+`, `-`, `*`, `/`
 - Parenthesized subexpressions: `(2 + 3) * 4`
 - Multi-digit numbers: `1234 + 5678`
+- Identifiers: `x`, `my_var`, `total123`
 - Whitespace, newlines, and tabs are ignored
 
-Numbers are `i64` internally, so negative results work fine but there's no float support yet.
+Numbers are `i64` internally, so negative results work fine but there's no float support yet. Identifier evaluation is a stub for now — identifiers parse correctly but always resolve to `0`.
