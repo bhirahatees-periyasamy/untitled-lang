@@ -1,8 +1,12 @@
+use crate::token::keyword::Keyword;
+
 #[derive(Debug, PartialEq, Clone)]
 pub enum TokenKind {
     Number(i64),
 
     Identifier(String),
+
+    Keyword(Keyword),
 
     Plus,
     Minus,

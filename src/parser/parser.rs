@@ -13,7 +13,7 @@ pub enum Literal {
     Number(i64),
 }
 
-#[derive(Debug)]
+#[derive(Debug,PartialEq, Clone)]
 pub enum Expr {
     Literal(Literal),
     Identifier(String),
@@ -41,16 +41,6 @@ impl Parser {
         self.position >= self.tokens.len()
     }
 
-    // fn check(&self, token: &TokenKind) -> bool {
-    //     match self.peek() {
-    //         Some(current_token) => {
-    //             std::mem::discriminant(&current_token) == std::mem::discriminant(token)
-    //         }
-
-    //         None => false,
-    //     }
-    // }
-
     fn previous(&self) -> Option<&TokenKind> {
         if self.position == 0 {
             None
@@ -71,7 +61,7 @@ impl Parser {
         self.previous().cloned()
     }
 
-    fn factor(&mut self) -> Result<Expr, String> {
+    fn primary(&mut self) -> Result<Expr, String> {
         match self.peek() {
             Some(TokenKind::Number(value)) => {
                 let value = *value;
@@ -100,7 +90,7 @@ impl Parser {
     }
 
     fn term(&mut self) -> Result<Expr, String> {
-        let mut left = self.factor()?;
+        let mut left = self.primary()?;
 
         while self.matches(&[TokenKind::Star, TokenKind::Slash]) {
             let operator = match self.previous() {
@@ -109,7 +99,7 @@ impl Parser {
                 _ => unreachable!(),
             };
 
-            let right = self.factor()?;
+            let right = self.primary()?;
 
             left = Expr::Binary {
                 left: Box::new(left),
