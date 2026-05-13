@@ -12,7 +12,7 @@ The pipeline is pretty straightforward:
 
 1. **Lexer** — walks the input string character by character and spits out tokens (`Number`, `Plus`, `Star`, `LParen`, etc.)
 2. **Parser** — takes those tokens and builds an AST using a recursive descent approach. `expression → term → factor` handles precedence without any extra machinery.
-3. **Evaluator** — walks the AST and computes the result. Division by zero returns an error rather than panicking.
+3. **Evaluator** — walks the AST and computes the result. Divide by zero returns an error rather than panicking.
 4. **Interpreter** — ties the three steps together into a single `execute(input)` call.
 
 ## Running it

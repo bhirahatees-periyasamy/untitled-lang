@@ -1,12 +1,12 @@
 use std::iter::Peekable;
 use std::str::Chars;
 
-use crate::token::token::Token;
+use crate::token::token::TokenKind;
 
 pub struct Lexer;
 
 impl Lexer {
-    pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
+    pub fn tokenize(input: &str) -> Result<Vec<TokenKind>, String> {
         let mut tokens = Vec::new();
         let mut chars = input.chars().peekable();
 
@@ -14,18 +14,18 @@ impl Lexer {
             match ch {
                 '0'..='9' => {
                     let value = Self::read_numbers(&mut chars, &ch);
-                    tokens.push(Token::Number(value));
+                    tokens.push(TokenKind::Number(value));
                 }
                 'a'..='z' | 'A'..='Z' | '_' => {
                     let value = Self::read_identifier(&mut chars, &ch);
-                    tokens.push(Token::Identifier(value));
+                    tokens.push(TokenKind::Identifier(value));
                 }
-                '+' => tokens.push(Token::Plus),
-                '-' => tokens.push(Token::Minus),
-                '*' => tokens.push(Token::Star),
-                '/' => tokens.push(Token::Slash),
-                '(' => tokens.push(Token::LParen),
-                ')' => tokens.push(Token::RParen),
+                '+' => tokens.push(TokenKind::Plus),
+                '-' => tokens.push(TokenKind::Minus),
+                '*' => tokens.push(TokenKind::Star),
+                '/' => tokens.push(TokenKind::Slash),
+                '(' => tokens.push(TokenKind::LParen),
+                ')' => tokens.push(TokenKind::RParen),
                 ' ' | '\n' | '\t' => {}
                 _ => {
                     return Err(format!("Unexpected character: {}", ch));
@@ -71,16 +71,16 @@ impl Lexer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::token::token::Token;
+    use crate::token::token::TokenKind;
 
     #[test]
     fn single_number() {
-        assert_eq!(Lexer::tokenize("42").unwrap(), vec![Token::Number(42)]);
+        assert_eq!(Lexer::tokenize("42").unwrap(), vec![TokenKind::Number(42)]);
     }
 
     #[test]
     fn multi_digit_number() {
-        assert_eq!(Lexer::tokenize("1234").unwrap(), vec![Token::Number(1234)]);
+        assert_eq!(Lexer::tokenize("1234").unwrap(), vec![TokenKind::Number(1234)]);
     }
 
     #[test]
@@ -88,14 +88,14 @@ mod tests {
         let tokens = Lexer::tokenize("+ - * /").unwrap();
         assert_eq!(
             tokens,
-            vec![Token::Plus, Token::Minus, Token::Star, Token::Slash]
+            vec![TokenKind::Plus, TokenKind::Minus, TokenKind::Star, TokenKind::Slash]
         );
     }
 
     #[test]
     fn parens() {
         let tokens = Lexer::tokenize("()").unwrap();
-        assert_eq!(tokens, vec![Token::LParen, Token::RParen]);
+        assert_eq!(tokens, vec![TokenKind::LParen, TokenKind::RParen]);
     }
 
     #[test]
@@ -103,7 +103,7 @@ mod tests {
         let tokens = Lexer::tokenize("1 + 2").unwrap();
         assert_eq!(
             tokens,
-            vec![Token::Number(1), Token::Plus, Token::Number(2)]
+            vec![TokenKind::Number(1), TokenKind::Plus, TokenKind::Number(2)]
         );
     }
 
@@ -112,7 +112,7 @@ mod tests {
         let tokens = Lexer::tokenize("3\n*\t4").unwrap();
         assert_eq!(
             tokens,
-            vec![Token::Number(3), Token::Star, Token::Number(4)]
+            vec![TokenKind::Number(3), TokenKind::Star, TokenKind::Number(4)]
         );
     }
 
@@ -122,13 +122,13 @@ mod tests {
         assert_eq!(
             tokens,
             vec![
-                Token::LParen,
-                Token::Number(1),
-                Token::Plus,
-                Token::Number(2),
-                Token::RParen,
-                Token::Star,
-                Token::Number(3),
+                TokenKind::LParen,
+                TokenKind::Number(1),
+                TokenKind::Plus,
+                TokenKind::Number(2),
+                TokenKind::RParen,
+                TokenKind::Star,
+                TokenKind::Number(3),
             ]
         );
     }
@@ -147,7 +147,7 @@ mod tests {
 fn identifier() {
     assert_eq!(
         Lexer::tokenize("hello").unwrap(),
-        vec![Token::Identifier("hello".to_string())]
+        vec![TokenKind::Identifier("hello".to_string())]
     );
 }
 
@@ -155,7 +155,7 @@ fn identifier() {
 fn identifier_with_numbers() {
     assert_eq!(
         Lexer::tokenize("total123").unwrap(),
-        vec![Token::Identifier("total123".to_string())]
+        vec![TokenKind::Identifier("total123".to_string())]
     );
 }
 
@@ -163,7 +163,7 @@ fn identifier_with_numbers() {
 fn identifier_with_underscore() {
     assert_eq!(
         Lexer::tokenize("my_var").unwrap(),
-        vec![Token::Identifier("my_var".to_string())]
+        vec![TokenKind::Identifier("my_var".to_string())]
     );
 }
 
@@ -172,9 +172,9 @@ fn identifier_expression() {
     assert_eq!(
         Lexer::tokenize("x + y").unwrap(),
         vec![
-            Token::Identifier("x".to_string()),
-            Token::Plus,
-            Token::Identifier("y".to_string()),
+            TokenKind::Identifier("x".to_string()),
+            TokenKind::Plus,
+            TokenKind::Identifier("y".to_string()),
         ]
     );
 }
