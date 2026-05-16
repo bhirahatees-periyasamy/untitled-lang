@@ -23,7 +23,8 @@ impl Lexer {
                         Some(keyword) => tokens.push(TokenKind::Keyword(keyword)),
                         None => tokens.push(TokenKind::Identifier(value)),
                     }
-                }
+                },
+                '=' => tokens.push(TokenKind::Equal),
                 '+' => tokens.push(TokenKind::Plus),
                 '-' => tokens.push(TokenKind::Minus),
                 '*' => tokens.push(TokenKind::Star),
@@ -194,6 +195,37 @@ mod tests {
                 TokenKind::Identifier("x".to_string()),
                 TokenKind::Plus,
                 TokenKind::Identifier("y".to_string()),
+            ]
+        );
+    }
+
+    #[test]
+    fn equal_sign() {
+        assert_eq!(Lexer::tokenize("=").unwrap(), vec![TokenKind::Equal]);
+    }
+
+    #[test]
+    fn assignment_expression() {
+        assert_eq!(
+            Lexer::tokenize("x = 5").unwrap(),
+            vec![
+                TokenKind::Identifier("x".to_string()),
+                TokenKind::Equal,
+                TokenKind::Number(5),
+            ]
+        );
+    }
+
+    #[test]
+    fn let_binding_with_equal() {
+        use crate::token::keyword::Keyword;
+        assert_eq!(
+            Lexer::tokenize("let x = 10").unwrap(),
+            vec![
+                TokenKind::Keyword(Keyword::Let),
+                TokenKind::Identifier("x".to_string()),
+                TokenKind::Equal,
+                TokenKind::Number(10),
             ]
         );
     }

@@ -3,6 +3,7 @@ pub mod token;
 pub mod parser;
 pub mod evaluator;
 pub mod interpreter;
+pub mod ast;
 
 use crate::interpreter::interpreter::Interpreter;
 

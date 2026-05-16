@@ -8,6 +8,8 @@ pub enum TokenKind {
 
     Keyword(Keyword),
 
+    Equal,
+
     Plus,
     Minus,
     Star,

@@ -1,5 +1,4 @@
-use crate::parser::parser::Expr;
-use crate::parser::parser::{BinaryOperator, Literal};
+use crate::ast::expr::{BinaryOperator, Literal,Expr};
 pub struct Evaluator;
 
 impl Evaluator {
@@ -42,7 +41,7 @@ impl Evaluator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parser::parser::Expr;
+    use crate::ast::expr::Expr;
 
     fn eval(expr: Expr) -> i64 {
         Evaluator.eval(&expr).unwrap()
