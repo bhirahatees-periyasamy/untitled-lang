@@ -2,7 +2,6 @@ use crate::ast::expr::{BinaryOperator, Expr, Literal};
 use crate::ast::statement::Statements;
 use crate::token::keyword::Keyword;
 use crate::token::token::TokenKind;
-use crate::parser::error::ParserError;
 
 pub struct Parser {
     tokens: Vec<TokenKind>,
