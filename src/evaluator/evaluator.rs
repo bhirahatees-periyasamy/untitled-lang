@@ -1,19 +1,62 @@
-use crate::ast::expr::{BinaryOperator, Literal,Expr};
-pub struct Evaluator;
+use crate::ast::{
+    expr::{BinaryOperator, Expr, Literal},
+    statement::Statements,
+};
+use std::collections::HashMap;
+
+pub struct Evaluator {
+    environment: HashMap<String, i64>,
+}
 
 impl Evaluator {
-    pub fn eval(&self, expr: &Expr) -> Result<i64, String> {
+    pub fn new() -> Self {
+        Self {
+            environment: HashMap::new(),
+        }
+    }
+
+    pub fn eval(&mut self, statements: Vec<Statements>) -> Result<Option<i64>, String> {
+        let mut last_value = None;
+
+        for statement in statements {
+            last_value = self.eval_statement(statement)?;
+        }
+
+        Ok(last_value)
+    }
+
+    pub fn eval_statement(&mut self, statement: Statements) -> Result<Option<i64>, String> {
+        match statement {
+            Statements::Empty => Ok(None),
+            Statements::Expression(expr) => {
+                let value = self.eval_expr(&expr)?;
+                Ok(Some(value))
+            }
+            Statements::VariablesDeclaration { name, initializer } => {
+                let value = self.eval_expr(&initializer)?;
+                self.environment.insert(name, value);
+                Ok(None)
+            }
+        }
+    }
+
+    pub fn eval_expr(&self, expr: &Expr) -> Result<i64, String> {
         match expr {
             Expr::Literal(val) => self.parse_literal(val),
 
-            Expr::Identifier(name) => Err(format!("Undefined variable: {}", name)),
+            Expr::Identifier(name) => self
+                .environment
+                .get(name)
+                .copied()
+                .ok_or_else(|| format!("Undefined variable: {}", name)),
+
             Expr::Binary {
                 left,
                 operator,
                 right,
             } => {
-                let left = self.eval(left)?;
-                let right = self.eval(right)?;
+                let left = self.eval_expr(left)?;
+                let right = self.eval_expr(right)?;
 
                 match operator {
                     BinaryOperator::Add => Ok(left + right),
@@ -44,7 +87,7 @@ mod tests {
     use crate::ast::expr::Expr;
 
     fn eval(expr: Expr) -> i64 {
-        Evaluator.eval(&expr).unwrap()
+        Evaluator::new().eval_expr(&expr).unwrap()
     }
 
     fn binary(op: BinaryOperator, l: i64, r: i64) -> Expr {
@@ -98,16 +141,87 @@ mod tests {
     }
 
     #[test]
-    fn indentifier_return_zero() {
+    fn undefined_identifier_returns_err() {
         assert_eq!(
-            Evaluator.eval(&Expr::Identifier("x".to_string())),
+            Evaluator::new().eval_expr(&Expr::Identifier("x".to_string())),
             Err("Undefined variable: x".to_string())
-        )
+        );
     }
 
     #[test]
     fn division_by_zero_returns_err() {
         let expr = binary(BinaryOperator::Divide, 10, 0);
-        assert!(Evaluator.eval(&expr).is_err());
+        assert!(Evaluator::new().eval_expr(&expr).is_err());
+    }
+
+    #[test]
+    fn variable_declaration_stores_value() {
+        let mut evaluator = Evaluator::new();
+        let result = evaluator
+            .eval_statement(Statements::VariablesDeclaration {
+                name: "x".to_string(),
+                initializer: Expr::Literal(Literal::Number(42)),
+            })
+            .unwrap();
+        // A declaration produces no value of its own.
+        assert_eq!(result, None);
+        // ...but the binding is now usable.
+        assert_eq!(
+            evaluator
+                .eval_expr(&Expr::Identifier("x".to_string()))
+                .unwrap(),
+            42
+        );
+    }
+
+    #[test]
+    fn variable_declaration_then_reference() {
+        // let x = 7
+        // x + 3   →  10
+        let mut evaluator = Evaluator::new();
+        let statements = vec![
+            Statements::VariablesDeclaration {
+                name: "x".to_string(),
+                initializer: Expr::Literal(Literal::Number(7)),
+            },
+            Statements::Expression(Expr::Binary {
+                left: Box::new(Expr::Identifier("x".to_string())),
+                operator: BinaryOperator::Add,
+                right: Box::new(Expr::Literal(Literal::Number(3))),
+            }),
+        ];
+        assert_eq!(evaluator.eval(statements).unwrap(), Some(10));
+    }
+
+    #[test]
+    fn eval_returns_last_expression_value() {
+        let mut evaluator = Evaluator::new();
+        let statements = vec![
+            Statements::Expression(Expr::Literal(Literal::Number(1))),
+            Statements::Expression(Expr::Literal(Literal::Number(2))),
+        ];
+        assert_eq!(evaluator.eval(statements).unwrap(), Some(2));
+    }
+
+    #[test]
+    fn declaration_only_yields_no_value() {
+        let mut evaluator = Evaluator::new();
+        let statements = vec![Statements::VariablesDeclaration {
+            name: "x".to_string(),
+            initializer: Expr::Literal(Literal::Number(1)),
+        }];
+        assert_eq!(evaluator.eval(statements).unwrap(), None);
+    }
+
+    #[test]
+    fn empty_statements_eval_to_none() {
+        let mut evaluator = Evaluator::new();
+        assert_eq!(evaluator.eval(vec![]).unwrap(), None);
+    }
+
+    #[test]
+    fn empty_statement_produces_no_value() {
+        let mut evaluator = Evaluator::new();
+        assert_eq!(evaluator.eval_statement(Statements::Empty).unwrap(), None);
     }
 }

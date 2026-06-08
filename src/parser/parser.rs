@@ -1,5 +1,7 @@
+use crate::ast::expr::{BinaryOperator, Expr, Literal};
+use crate::ast::statement::Statements;
+use crate::token::keyword::Keyword;
 use crate::token::token::TokenKind;
-use crate::ast::expr::{BinaryOperator,Expr,Literal};
 
 pub struct Parser {
     tokens: Vec<TokenKind>,
@@ -110,8 +112,14 @@ impl Parser {
         Ok(left)
     }
 
-    pub fn parse(&mut self) -> Result<Expr, String> {
-        self.expression()
+    pub fn parse(&mut self) -> Result<Vec<Statements>, String> {
+        let mut statements = Vec::new();
+
+        while !self.is_at_end() {
+            statements.push(self.parse_statement()?);
+        }
+
+        Ok(statements)
     }
 
     fn check(&self, token: &TokenKind) -> bool {
@@ -145,6 +153,35 @@ impl Parser {
 
         Err(message.to_string())
     }
+
+    fn parse_statement(&mut self) -> Result<Statements, String> {
+        match self.peek() {
+            Some(TokenKind::Keyword(Keyword::Let)) => self.parse_variable_declaration(),
+            _ => self.parse_expression(),
+        }
+    }
+
+    fn parse_expression(&mut self) -> Result<Statements, String> {
+        Ok(Statements::Expression(self.expression()?))
+    }
+
+    fn parse_variable_declaration(&mut self) -> Result<Statements, String> {
+        let _ = self.consume(
+            &TokenKind::Keyword(Keyword::Let),
+            "Expected 'let' but got unexpected keyword",
+        );
+
+        let name = match self.advance() {
+            Some(TokenKind::Identifier(name)) => name,
+            _ => return Err("Expected variable name".to_string()),
+        };
+
+        let _ = self.consume(&TokenKind::Equal, "Expected '=' after variable name");
+
+        let initializer = self.expression()?;
+
+        Ok(Statements::VariablesDeclaration { name, initializer })
+    }
 }
 
 #[cfg(test)]
@@ -152,8 +189,22 @@ mod tests {
     use super::*;
     use crate::token::token::TokenKind;
 
-    fn parse(tokens: Vec<TokenKind>) -> Expr {
+    fn parse_statements(tokens: Vec<TokenKind>) -> Vec<Statements> {
         Parser::new(tokens).parse().unwrap()
+    }
+
+    fn parse(tokens: Vec<TokenKind>) -> Expr {
+        let mut statements = parse_statements(tokens);
+        assert_eq!(
+            statements.len(),
+            1,
+            "Expected exactly one statement, got {:?}",
+            statements
+        );
+        match statements.remove(0) {
+            Statements::Expression(expr) => expr,
+            other => panic!("Expected an expression statement, got {:?}", other),
+        }
     }
 
     #[test]
@@ -320,5 +371,126 @@ mod tests {
         ])
         .parse();
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn chained_addition_is_left_associative() {
+        // 1 + 2 + 3  →  Binary(+, Binary(+, 1, 2), 3)
+        let expr = parse(vec![
+            TokenKind::Number(1),
+            TokenKind::Plus,
+            TokenKind::Number(2),
+            TokenKind::Plus,
+            TokenKind::Number(3),
+        ]);
+        assert!(matches!(
+            expr,
+            Expr::Binary {
+                operator: BinaryOperator::Add,
+                ..
+            }
+        ));
+        if let Expr::Binary { left, .. } = expr {
+            assert!(matches!(
+                *left,
+                Expr::Binary {
+                    operator: BinaryOperator::Add,
+                    ..
+                }
+            ));
+        }
+    }
+
+    #[test]
+    fn division_then_subtraction_precedence() {
+        // 8 - 4 / 2  →  Binary(-, 8, Binary(/, 4, 2))
+        let expr = parse(vec![
+            TokenKind::Number(8),
+            TokenKind::Minus,
+            TokenKind::Number(4),
+            TokenKind::Slash,
+            TokenKind::Number(2),
+        ]);
+        assert!(matches!(
+            expr,
+            Expr::Binary {
+                operator: BinaryOperator::Subtract,
+                ..
+            }
+        ));
+        if let Expr::Binary { right, .. } = expr {
+            assert!(matches!(
+                *right,
+                Expr::Binary {
+                    operator: BinaryOperator::Divide,
+                    ..
+                }
+            ));
+        }
+    }
+
+    #[test]
+    fn variable_declaration() {
+        // let x = 1 + 2
+        let statements = parse_statements(vec![
+            TokenKind::Keyword(Keyword::Let),
+            TokenKind::Identifier("x".to_string()),
+            TokenKind::Equal,
+            TokenKind::Number(1),
+            TokenKind::Plus,
+            TokenKind::Number(2),
+        ]);
+        assert_eq!(statements.len(), 1);
+        match &statements[0] {
+            Statements::VariablesDeclaration { name, initializer } => {
+                assert_eq!(name, "x");
+                assert!(matches!(
+                    initializer,
+                    Expr::Binary {
+                        operator: BinaryOperator::Add,
+                        ..
+                    }
+                ));
+            }
+            other => panic!("Expected a variable declaration, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn variable_declaration_missing_name_returns_err() {
+        let result = Parser::new(vec![
+            TokenKind::Keyword(Keyword::Let),
+            TokenKind::Equal,
+            TokenKind::Number(1),
+        ])
+        .parse();
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn multiple_statements() {
+        // let x = 1
+        // 2 + 3
+        let statements = parse_statements(vec![
+            TokenKind::Keyword(Keyword::Let),
+            TokenKind::Identifier("x".to_string()),
+            TokenKind::Equal,
+            TokenKind::Number(1),
+            TokenKind::Number(2),
+            TokenKind::Plus,
+            TokenKind::Number(3),
+        ]);
+        assert_eq!(statements.len(), 2);
+        assert!(matches!(
+            statements[0],
+            Statements::VariablesDeclaration { .. }
+        ));
+        assert!(matches!(statements[1], Statements::Expression(_)));
+    }
+
+    #[test]
+    fn empty_input_yields_no_statements() {
+        let statements = parse_statements(vec![]);
+        assert!(statements.is_empty());
     }
 }

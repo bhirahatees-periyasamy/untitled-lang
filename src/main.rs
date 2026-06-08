@@ -8,7 +8,7 @@ pub mod ast;
 use crate::interpreter::interpreter::Interpreter;
 
 fn main() {
-    let expression = "123 + (5 * 3)";
+    let expression = "128 + 2";
     let result = Interpreter.execute(expression);
     match result {
         Ok(val) => println!("{}", val),

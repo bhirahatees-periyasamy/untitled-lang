@@ -9,7 +9,8 @@ impl Interpreter {
         let tokens = Lexer::tokenize(expression)?;
         let mut parser = Parser::new(tokens);
         let parsed = parser.parse()?;
-        Evaluator.eval(&parsed)
+        let mut evaluator = Evaluator::new();
+        Ok(evaluator.eval(parsed)?.unwrap_or(0))
     }
 }
 
