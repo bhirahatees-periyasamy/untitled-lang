@@ -2,6 +2,7 @@ use crate::ast::expr::{BinaryOperator, Expr, Literal};
 use crate::ast::statement::Statements;
 use crate::token::keyword::Keyword;
 use crate::token::token::TokenKind;
+use crate::parser::error::ParserError;
 
 pub struct Parser {
     tokens: Vec<TokenKind>,
@@ -32,12 +33,12 @@ impl Parser {
         self.tokens.get(self.position)
     }
 
-    fn advance(&mut self) -> Option<TokenKind> {
+    fn advance(&mut self) -> Option<&TokenKind> {
         if !self.is_at_end() {
             self.position += 1;
         }
 
-        self.previous().cloned()
+        self.previous()
     }
 
     fn primary(&mut self) -> Result<Expr, String> {
@@ -143,7 +144,7 @@ impl Parser {
         false
     }
 
-    fn consume(&mut self, kind: &TokenKind, message: &str) -> Result<TokenKind, String> {
+    fn consume(&mut self, kind: &TokenKind, message: &str) -> Result<&TokenKind, String> {
         if self.check(kind) {
             let token = self
                 .advance()
@@ -172,7 +173,7 @@ impl Parser {
         );
 
         let name = match self.advance() {
-            Some(TokenKind::Identifier(name)) => name,
+            Some(TokenKind::Identifier(name)) => name.to_string(),
             _ => return Err("Expected variable name".to_string()),
         };
 
@@ -180,7 +181,7 @@ impl Parser {
 
         let initializer = self.expression()?;
 
-        Ok(Statements::VariablesDeclaration { name, initializer })
+        Ok(Statements::VariableDeclaration { name, initializer })
     }
 }
 
@@ -442,7 +443,7 @@ mod tests {
         ]);
         assert_eq!(statements.len(), 1);
         match &statements[0] {
-            Statements::VariablesDeclaration { name, initializer } => {
+            Statements::VariableDeclaration { name, initializer } => {
                 assert_eq!(name, "x");
                 assert!(matches!(
                     initializer,
@@ -483,7 +484,7 @@ mod tests {
         assert_eq!(statements.len(), 2);
         assert!(matches!(
             statements[0],
-            Statements::VariablesDeclaration { .. }
+            Statements::VariableDeclaration { .. }
         ));
         assert!(matches!(statements[1], Statements::Expression(_)));
     }

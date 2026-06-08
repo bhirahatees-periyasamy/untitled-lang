@@ -27,12 +27,11 @@ impl Evaluator {
 
     pub fn eval_statement(&mut self, statement: Statements) -> Result<Option<i64>, String> {
         match statement {
-            Statements::Empty => Ok(None),
             Statements::Expression(expr) => {
                 let value = self.eval_expr(&expr)?;
                 Ok(Some(value))
             }
-            Statements::VariablesDeclaration { name, initializer } => {
+            Statements::VariableDeclaration { name, initializer } => {
                 let value = self.eval_expr(&initializer)?;
                 self.environment.insert(name, value);
                 Ok(None)
@@ -158,7 +157,7 @@ mod tests {
     fn variable_declaration_stores_value() {
         let mut evaluator = Evaluator::new();
         let result = evaluator
-            .eval_statement(Statements::VariablesDeclaration {
+            .eval_statement(Statements::VariableDeclaration {
                 name: "x".to_string(),
                 initializer: Expr::Literal(Literal::Number(42)),
             })
@@ -180,7 +179,7 @@ mod tests {
         // x + 3   →  10
         let mut evaluator = Evaluator::new();
         let statements = vec![
-            Statements::VariablesDeclaration {
+            Statements::VariableDeclaration {
                 name: "x".to_string(),
                 initializer: Expr::Literal(Literal::Number(7)),
             },
@@ -206,7 +205,7 @@ mod tests {
     #[test]
     fn declaration_only_yields_no_value() {
         let mut evaluator = Evaluator::new();
-        let statements = vec![Statements::VariablesDeclaration {
+        let statements = vec![Statements::VariableDeclaration {
             name: "x".to_string(),
             initializer: Expr::Literal(Literal::Number(1)),
         }];
@@ -219,9 +218,4 @@ mod tests {
         assert_eq!(evaluator.eval(vec![]).unwrap(), None);
     }
 
-    #[test]
-    fn empty_statement_produces_no_value() {
-        let mut evaluator = Evaluator::new();
-        assert_eq!(evaluator.eval_statement(Statements::Empty).unwrap(), None);
-    }
 }
