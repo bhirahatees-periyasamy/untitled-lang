@@ -1,6 +1,14 @@
+use crate::token::keyword::Keyword;
+
 #[derive(Debug, PartialEq, Clone)]
-pub enum Token {
+pub enum TokenKind {
     Number(i64),
+
+    Identifier(String),
+
+    Keyword(Keyword),
+
+    Equal,
 
     Plus,
     Minus,
@@ -19,15 +27,15 @@ mod tests {
 
     #[test]
     fn token_equality() {
-        assert_eq!(Token::Number(42), Token::Number(42));
-        assert_ne!(Token::Number(1), Token::Number(2));
-        assert_eq!(Token::Plus, Token::Plus);
-        assert_ne!(Token::Plus, Token::Minus);
+        assert_eq!(TokenKind::Number(42), TokenKind::Number(42));
+        assert_ne!(TokenKind::Number(1), TokenKind::Number(2));
+        assert_eq!(TokenKind::Plus, TokenKind::Plus);
+        assert_ne!(TokenKind::Plus, TokenKind::Minus);
     }
 
     #[test]
     fn token_clone() {
-        let t = Token::Number(7);
-        assert_eq!(t.clone(), Token::Number(7));
+        let t = TokenKind::Number(7);
+        assert_eq!(t.clone(), TokenKind::Number(7));
     }
 }
